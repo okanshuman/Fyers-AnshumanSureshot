@@ -172,3 +172,4 @@ cython_debug/
 .DS_Store
 ._.DS_Store
 ._app.py
+Credentails.py
