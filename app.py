@@ -47,24 +47,10 @@ def fetch_holdings_for_selling():
 
         filtered_holdings.sort(key=lambda x: x['percentChange'])
 
+        # Sell stocks using the new sell function
         for holding in filtered_holdings:
             if holding['percentChange'] > -15 and holding['symbol'] not in processed_symbols:
-                order_data = {
-                    "symbol": f"NSE:{holding['symbol']}-EQ",
-                    "qty": holding['quantity'],
-                    "type": 2,
-                    "side": -1,
-                    "productType": "CNC",
-                    "limitPrice": 0,
-                    "stopPrice": 0,
-                    "validity": "DAY",
-                    "disclosedQty": 0,
-                    "offlineOrder": False,
-                    "orderTag": "tag1"
-                }
-                response = fyers.fyers_active.place_order(data=order_data)
-                print(f"Sell order placed for {holding['symbol']}: {response}")
-                processed_symbols.add(holding['symbol'])
+                place_sell_order(holding)
 
         holdings_data = filtered_holdings
 
@@ -73,6 +59,30 @@ def fetch_holdings_for_selling():
     except Exception as e:
         print(f"Error fetching holdings: {str(e)}")
         return 0.0
+
+def place_sell_order(holding):
+    try:
+        order_data = {
+            "symbol": f"NSE:{holding['symbol']}-EQ",
+            "qty": holding['quantity'],
+            "type": 2,
+            "side": -1,  # Side -1 indicates a sell order
+            "productType": "CNC",
+            "limitPrice": 0,
+            "stopPrice": 0,
+            "validity": "DAY",
+            "disclosedQty": 0,
+            "offlineOrder": False,
+            "orderTag": "tag1"
+        }
+        response = fyers.fyers_active.place_order(data=order_data)
+        print(f"Sell order placed for {holding['symbol']}: {response}")
+        
+        # Add the symbol to processed symbols after a successful sell order
+        processed_symbols.add(holding['symbol'])
+
+    except Exception as e:
+        print(f"Error placing sell order for {holding['symbol']}: {str(e)}")
 
 def place_buy_order(holding):
     try:
