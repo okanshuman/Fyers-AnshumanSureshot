@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
+</head>
+<body>
+
+<h1>Your Stock Dashboard</h1>
+
+<!-- Fyers Holdings Table -->
+<h2>Your Current Holdings</h2>
+<div class="total-pl {% if total_pl < 0 %}loss{% else %}profit{% endif %}">
+    Total Profit/Loss: {{ total_pl }}
+</div>
+<table id="holdingsTable" class="display">
+    <thead>
+        <tr>
+            <th>Symbol</th>
+            <th>Quantity</th>
+            <th>Cost Price</th>
+            <th>Last Traded Price (LTP)</th>
+            <th>P&L</th>
+            <th>% Change</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for holding in holdings %}
+        <tr>
+            <td>{{ holding.symbol }}</td>
+            <td>{{ holding.quantity }}</td>
+            <td>{{ holding.costPrice }}</td>
+            <td>{{ holding.ltp }}</td>
+            <td>{{ holding.pl }}</td>
+            <td>{{ holding.percentChange }}%</td> 
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Chartink Stocks Table -->
+<h2>Identified Stocks</h2>
+<table id="stockTable" class="display">
+    <thead>
+        <tr>
+            <th>Stock Name</th>
+            <th>Stock Symbol</th>
+            <th>Date Identified</th> 
+        </tr>
+    </thead>
+    <tbody id="stockTableBody"></tbody>
+</table>
+
+<script>
+// Fetch Stocks Data from API
+function fetchStocks() {
+     const tableBody = $('#stockTableBody');
+     tableBody.empty(); // Clear existing rows
+
+     $.ajax({
+         url: '/api/stocks',
+         method: 'GET',
+         success: function(data) {
+             if (data.length === 0) {
+                 tableBody.append('<tr><td colspan="3">No stocks available.</td></tr>');
+             } else {
+                 data.forEach(stock => {
+                     const stockSymbol = stock.symbol.replace('.NS', '');
+                     tableBody.append(`<tr><td>${stock.name}</td><td>${stockSymbol}</td><td>${stock.date}</td></tr>`);
+                 });
+             }
+             $('#stockTable').DataTable(); // Initialize DataTable after adding rows
+         },
+         error: function(xhr, status, error) {
+             console.error("Error fetching stock data:", error);
+             alert("Failed to fetch stock data. Please try again later.");
+         }
+     });
+}
+
+// Initial fetch on load and set interval to refresh every 5 minutes
+$(document).ready(function() {
+     fetchStocks();
+     setInterval(fetchStocks, 300000); // Fetch stocks every 5 minutes
+     
+     // Initialize DataTables with page length of 50
+     $('#holdingsTable').DataTable({
+         pageLength: 50 // Set default number of rows to display for holdings
+     });
+     
+     $('#stockTable').DataTable({
+         pageLength: 50 // Set default number of rows to display for stocks
+     });
+});
+</script>
+
+</body>
+</html>
