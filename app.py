@@ -25,7 +25,7 @@ processed_symbols = set()
 stock_data = []
 data_lock = threading.Lock()
 
-def fetch_holdings():
+def fetch_holdings_for_sellng():
     global holdings_data
     try:
         holdings_response = fyers.fyers_active.holdings()
@@ -47,7 +47,7 @@ def fetch_holdings():
         filtered_holdings.sort(key=lambda x: x['percentChange'])
 
         for holding in filtered_holdings:
-            if holding['percentChange'] >-5 and holding['symbol'] not in processed_symbols:
+            if holding['percentChange'] >-15 and holding['symbol'] not in processed_symbols:
                 order_data = {
                     "symbol": f"NSE:{holding['symbol']}-EQ",
                     "qty": holding['quantity'],
@@ -125,7 +125,7 @@ def fetch_stocks():
 
 @app.route("/", methods=["GET"])
 def index():
-    total_pl = fetch_holdings()  
+    total_pl = fetch_holdings_for_sellng()  
     return render_template("index.html", holdings=holdings_data, total_pl=total_pl)
 
 @app.route("/api/stocks", methods=["GET"])
@@ -135,7 +135,7 @@ def get_stocks():
 
 @scheduler.task('interval', id='update_holdings_task', seconds=15)
 def scheduled_update():
-    fetch_holdings()
+    fetch_holdings_for_sellng()
 
 def update_stocks_periodically():
     while True:
