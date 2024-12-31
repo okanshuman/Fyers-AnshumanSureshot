@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, send_from_directory
+from flask import Flask, render_template, jsonify
 from flask_apscheduler import APScheduler
 import Login as fyers
 from utils import round_to_two_decimal, is_valid_symbol, clean_symbol, calculate_percentage_change
@@ -23,9 +23,10 @@ scheduler = APScheduler()
 holdings_data = []
 processed_symbols = set()
 stock_data = []
+purchased_symbols = set()  # Set to track purchased stock symbols
 data_lock = threading.Lock()
 
-def fetch_holdings_for_sellng():
+def fetch_holdings_for_selling():
     global holdings_data
     try:
         holdings_response = fyers.fyers_active.holdings()
@@ -62,7 +63,7 @@ def fetch_holdings_for_sellng():
                     "orderTag": "tag1"
                 }
                 response = fyers.fyers_active.place_order(data=order_data)
-                print(f"Order placed for {holding['symbol']}: {response}")
+                print(f"Sell order placed for {holding['symbol']}: {response}")
                 processed_symbols.add(holding['symbol'])
 
         holdings_data = filtered_holdings
@@ -72,6 +73,34 @@ def fetch_holdings_for_sellng():
     except Exception as e:
         print(f"Error fetching holdings: {str(e)}")
         return 0.0
+
+def place_buy_order(holding):
+    try:
+        if holding['symbol'] in purchased_symbols:
+            print(f"Stock {holding['symbol']} has already been purchased. Skipping buy order.")
+            return
+        
+        order_data = {
+            "symbol": f"NSE:{holding['symbol']}-EQ",
+            "qty": 1,  # Set quantity to 1 for buying stocks
+            "type": 2,
+            "side": 1,  # Side 1 indicates a buy order
+            "productType": "CNC",
+            "limitPrice": 0,
+            "stopPrice": 0,
+            "validity": "DAY",
+            "disclosedQty": 0,
+            "offlineOrder": False,
+            "orderTag": "tag1"
+        }
+        response = fyers.fyers_active.place_order(data=order_data)
+        print(f"Buy order placed for {holding['symbol']}: {response}")
+        
+        # Add the symbol to the set of purchased symbols after a successful buy order
+        purchased_symbols.add(holding['symbol'])
+        
+    except Exception as e:
+        print(f"Error placing buy order for {holding['symbol']}: {str(e)}")
 
 def fetch_stocks():
     global stock_data  
@@ -104,7 +133,7 @@ def fetch_stocks():
                 columns = row.find_elements(By.TAG_NAME, 'td')
                 if len(columns) > 1:
                     stock_name = columns[1].text.strip()
-                    stock_symbol = clean_symbol(columns[2].text.strip().replace('$', ''))  # Clean symbol here
+                    stock_symbol = clean_symbol(columns[2].text.strip().replace('$', ''))  
                     identified_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     
                     if is_valid_symbol(stock_symbol) and not any(stock['symbol'] == stock_symbol for stock in stock_data):
@@ -113,7 +142,12 @@ def fetch_stocks():
         if new_stocks:
             with data_lock:
                 stock_data.extend(new_stocks)
-            logging.info(f"New stocks identified: {new_stocks}")
+                
+                # Place buy orders for each new stock identified
+                for stock in new_stocks:
+                    place_buy_order(stock)
+
+            logging.info(f"New stocks identified and buy orders placed: {new_stocks}")
         else:
             logging.info("No new stocks identified.")
 
@@ -125,7 +159,7 @@ def fetch_stocks():
 
 @app.route("/", methods=["GET"])
 def index():
-    total_pl = fetch_holdings_for_sellng()  
+    total_pl = fetch_holdings_for_selling()  
     return render_template("index.html", holdings=holdings_data, total_pl=total_pl)
 
 @app.route("/api/stocks", methods=["GET"])
@@ -135,7 +169,7 @@ def get_stocks():
 
 @scheduler.task('interval', id='update_holdings_task', seconds=15)
 def scheduled_update():
-    fetch_holdings_for_sellng()
+    fetch_holdings_for_selling()
 
 def update_stocks_periodically():
     while True:
