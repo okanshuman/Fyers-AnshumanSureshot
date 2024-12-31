@@ -47,7 +47,7 @@ def fetch_holdings_for_sellng():
         filtered_holdings.sort(key=lambda x: x['percentChange'])
 
         for holding in filtered_holdings:
-            if holding['percentChange'] >-15 and holding['symbol'] not in processed_symbols:
+            if holding['percentChange'] > -15 and holding['symbol'] not in processed_symbols:
                 order_data = {
                     "symbol": f"NSE:{holding['symbol']}-EQ",
                     "qty": holding['quantity'],
@@ -104,10 +104,10 @@ def fetch_stocks():
                 columns = row.find_elements(By.TAG_NAME, 'td')
                 if len(columns) > 1:
                     stock_name = columns[1].text.strip()
-                    stock_symbol = columns[2].text.strip().replace('$', '') + '.NS'
+                    stock_symbol = clean_symbol(columns[2].text.strip().replace('$', ''))  # Clean symbol here
                     identified_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     
-                    if not any(stock['symbol'] == stock_symbol for stock in stock_data):
+                    if is_valid_symbol(stock_symbol) and not any(stock['symbol'] == stock_symbol for stock in stock_data):
                         new_stocks.append({"name": stock_name, "symbol": stock_symbol, "date": identified_date})
 
         if new_stocks:
