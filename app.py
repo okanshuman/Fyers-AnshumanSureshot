@@ -1,3 +1,5 @@
+# app.py
+
 from flask import Flask, render_template, jsonify
 from flask_apscheduler import APScheduler
 import Login as fyers
@@ -141,13 +143,16 @@ def fetch_stocks():
 
             for row in rows:
                 columns = row.find_elements(By.TAG_NAME, 'td')
-                if len(columns) > 1:
+                if len(columns) > 5:  # Ensure there are enough columns to avoid index errors
                     stock_name = columns[1].text.strip()
                     stock_symbol = clean_symbol(columns[2].text.strip().replace('$', ''))  
+                    current_price = round_to_two_decimal(float(columns[5].text.strip()))  # Fetch current price
                     identified_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    
+
                     if is_valid_symbol(stock_symbol) and not any(stock['symbol'] == stock_symbol for stock in stock_data):
-                        new_stocks.append({"name": stock_name, "symbol": stock_symbol, "date": identified_date})
+                        new_stocks.append({"name": stock_name, "symbol": stock_symbol, 
+                                           "current_price": current_price, 
+                                           "date": identified_date})
 
         if new_stocks:
             with data_lock:

@@ -79,6 +79,7 @@
         <tr>
             <th>Stock Name</th>
             <th>Stock Symbol</th>
+            <th>Current Price</th> <!-- New column for Current Price -->
             <th>Date Identified</th> 
         </tr>
     </thead>
@@ -96,12 +97,12 @@ function fetchStocks() {
          method: 'GET',
          success: function(data) {
              if (data.length === 0) {
-                 tableBody.append('<tr><td colspan="3">No stocks available.</td></tr>');
+                 tableBody.append('<tr><td colspan="4">No stocks available.</td></tr>');
              } else {
                  data.forEach(stock => {
                      const stockSymbol = stock.symbol.replace('.NS', '');
                      const stockLink = `https://www.tradingview.com/chart/OGJ1XBYF/?symbol=NSE%3A${stockSymbol}`;
-                     tableBody.append(`<tr><td>${stock.name}</td><td><a href="${stockLink}" target="_blank">${stockSymbol}</a></td><td>${stock.date}</td></tr>`);
+                     tableBody.append(`<tr><td>${stock.name}</td><td><a href="${stockLink}" target="_blank">${stockSymbol}</a></td><td>${stock.current_price}</td><td>${stock.date}</td></tr>`); // Added current price here
                  });
              }
              $('#stockTable').DataTable({ // Initialize DataTable after adding rows
@@ -122,7 +123,7 @@ function fetchStocks() {
 $(document).ready(function() {
      fetchStocks();
      setInterval(fetchStocks, 300000); // Fetch stocks every 5 minutes
-     
+
      // Initialize DataTables with page length of 50 for holdings
      $('#holdingsTable').DataTable({
          pageLength: 50 // Set default number of rows to display for holdings
