@@ -7,16 +7,46 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
+    <style>
+        .profit {
+            color: green;
+        }
+        .loss {
+            color: red;
+        }
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .total-pl {
+            margin-left: auto; /* Aligns the total profit/loss to the right */
+        }
+        /* Center align all table contents */
+        table {
+            width: 100%; /* Ensure tables take full width */
+            border-collapse: collapse; /* Combine borders for a cleaner look */
+        }
+        th, td {
+            text-align: center; /* Center align text in header and body cells */
+            padding: 8px; /* Add some padding for better spacing */
+            border: 1px solid #ddd; /* Add a border to cells */
+        }
+        th {
+            background-color: #f2f2f2; /* Set header background color to grey */
+        }
+    </style>
 </head>
 <body>
 
-<h1>Your Stock Dashboard</h1>
-
 <!-- Fyers Holdings Table -->
-<h2>Your Current Holdings</h2>
-<div class="total-pl {% if total_pl < 0 %}loss{% else %}profit{% endif %}">
-    Total Profit/Loss: {{ total_pl }}
-</div>
+<h2 class="header-row">
+    Your Current Holdings
+    <div class="total-pl {% if total_pl < 0 %}loss{% else %}profit{% endif %}">
+        Total Profit/Loss: <span>{{ total_pl }}</span>
+    </div>
+</h2>
+
 <table id="holdingsTable" class="display">
     <thead>
         <tr>
@@ -73,7 +103,12 @@ function fetchStocks() {
                      tableBody.append(`<tr><td>${stock.name}</td><td>${stockSymbol}</td><td>${stock.date}</td></tr>`);
                  });
              }
-             $('#stockTable').DataTable(); // Initialize DataTable after adding rows
+             $('#stockTable').DataTable({ // Initialize DataTable after adding rows
+                 pageLength: 50,
+                 language: {
+                     emptyTable: "" // Suppress the "No data available in table" message
+                 }
+             });
          },
          error: function(xhr, status, error) {
              console.error("Error fetching stock data:", error);
@@ -87,13 +122,9 @@ $(document).ready(function() {
      fetchStocks();
      setInterval(fetchStocks, 300000); // Fetch stocks every 5 minutes
      
-     // Initialize DataTables with page length of 50
+     // Initialize DataTables with page length of 50 for holdings
      $('#holdingsTable').DataTable({
          pageLength: 50 // Set default number of rows to display for holdings
-     });
-     
-     $('#stockTable').DataTable({
-         pageLength: 50 // Set default number of rows to display for stocks
      });
 });
 </script>
