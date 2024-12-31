@@ -14,6 +14,7 @@ import logging
 import threading
 import time
 from datetime import datetime
+import math  # Import math module for floor division
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -92,9 +93,13 @@ def place_buy_order(holding):
             print(f"Stock {holding['symbol']} has already been purchased. Skipping buy order.")
             return
         
+        # Calculate dynamic buy quantity based on current price
+        current_price = holding['current_price']
+        buy_quantity = math.floor(10000 / current_price)  # Calculate quantity without decimals
+        
         order_data = {
             "symbol": f"NSE:{holding['symbol']}-EQ",
-            "qty": 1,  # Set quantity to 1 for buying stocks
+            "qty": buy_quantity,  # Use dynamic quantity here
             "type": 2,
             "side": 1,  # Side 1 indicates a buy order
             "productType": "CNC",
@@ -106,7 +111,7 @@ def place_buy_order(holding):
             "orderTag": "tag1"
         }
         response = fyers.fyers_active.place_order(data=order_data)
-        print(f"Buy order placed for {holding['symbol']}: {response}")
+        print(f"Buy order placed for {holding['symbol']} with quantity {buy_quantity}: {response}")
         
         # Add the symbol to the set of purchased symbols after a successful buy order
         purchased_symbols.add(holding['symbol'])
@@ -150,7 +155,8 @@ def fetch_stocks():
                     identified_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
                     if is_valid_symbol(stock_symbol) and not any(stock['symbol'] == stock_symbol for stock in stock_data):
-                        new_stocks.append({"name": stock_name, "symbol": stock_symbol, 
+                        new_stocks.append({"name": stock_name, 
+                                           "symbol": stock_symbol, 
                                            "current_price": current_price, 
                                            "date": identified_date})
 
@@ -182,17 +188,15 @@ def get_stocks():
     with data_lock:
         return jsonify(stock_data)  
 
-@scheduler.task('interval', id='update_holdings_task', seconds=15)
+@scheduler.task('interval', id='update_stocks_task', seconds=180)  # Fetch stocks every 5 minutes
 def scheduled_update():
-    fetch_holdings_for_selling()
+    fetch_stocks()
 
-def update_stocks_periodically():
-    while True:
-        fetch_stocks()
-        time.sleep(300)  
+@scheduler.task('interval', id='update_holdings_task', seconds=60)  # Update holdings every 15 seconds
+def scheduled_update_holdings():
+    fetch_holdings_for_selling()
 
 if __name__ == "__main__":
     scheduler.init_app(app)
     scheduler.start()
-    threading.Thread(target=update_stocks_periodically).start()
     app.run(debug=False, host='0.0.0.0', port=5001)
