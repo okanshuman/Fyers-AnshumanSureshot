@@ -87,8 +87,7 @@
 </table>
 
 <script>
-// Fetch Stocks Data from API (this part can be removed since we are handling it server-side now)
-// This will keep fetching stocks only when needed.
+// Fetch Stocks Data from API
 function fetchStocks() {
      const tableBody = $('#stockTableBody');
      tableBody.empty(); // Clear existing rows
@@ -120,7 +119,7 @@ function fetchStocks() {
      });
 }
 
-// Initial fetch on load (optional if you want immediate loading)
+// Initial fetch on load and set interval to refresh every minute (optional)
 $(document).ready(function() {
      fetchStocks(); // Fetch stocks immediately on page load
 

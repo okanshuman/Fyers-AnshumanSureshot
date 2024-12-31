@@ -2,6 +2,7 @@
 
 from flask import Flask, render_template, jsonify
 from flask_apscheduler import APScheduler
+from apscheduler.triggers.cron import CronTrigger  # Import CronTrigger
 import Login as fyers
 from utils import round_to_two_decimal, is_valid_symbol, clean_symbol, calculate_percentage_change
 from selenium import webdriver
@@ -87,37 +88,40 @@ def place_sell_order(holding):
     except Exception as e:
         print(f"Error placing sell order for {holding['symbol']}: {str(e)}")
 
-def place_buy_order(holding):
+def place_buy_order():
+    global stock_data  # Access global stock data to place buy orders
+
     try:
-        if holding['symbol'] in purchased_symbols:
-            print(f"Stock {holding['symbol']} has already been purchased. Skipping buy order.")
-            return
-        
-        # Calculate dynamic buy quantity based on current price
-        current_price = holding['current_price']
-        buy_quantity = math.floor(5000 / current_price)  # Calculate quantity without decimals
-        
-        order_data = {
-            "symbol": f"NSE:{holding['symbol']}-EQ",
-            "qty": buy_quantity,  # Use dynamic quantity here
-            "type": 2,
-            "side": 1,  # Side 1 indicates a buy order
-            "productType": "CNC",
-            "limitPrice": 0,
-            "stopPrice": 0,
-            "validity": "DAY",
-            "disclosedQty": 0,
-            "offlineOrder": False,
-            "orderTag": "tag1"
-        }
-        response = fyers.fyers_active.place_order(data=order_data)
-        print(f"Buy order placed for {holding['symbol']} with quantity {buy_quantity}: {response}")
-        
-        # Add the symbol to the set of purchased symbols after a successful buy order
-        purchased_symbols.add(holding['symbol'])
+        for stock in stock_data:
+            if stock['symbol'] in purchased_symbols:
+                print(f"Stock {stock['symbol']} has already been purchased. Skipping buy order.")
+                continue
+            
+            # Calculate dynamic buy quantity based on current price
+            current_price = stock['current_price']
+            buy_quantity = math.floor(5000 / current_price)  # Calculate quantity without decimals
+            
+            order_data = {
+                "symbol": f"NSE:{stock['symbol']}-EQ",
+                "qty": buy_quantity,  # Use dynamic quantity here
+                "type": 2,
+                "side": 1,  # Side 1 indicates a buy order
+                "productType": "CNC",
+                "limitPrice": 0,
+                "stopPrice": 0,
+                "validity": "DAY",
+                "disclosedQty": 0,
+                "offlineOrder": False,
+                "orderTag": "tag1"
+            }
+            response = fyers.fyers_active.place_order(data=order_data)
+            print(f"Buy order placed for {stock['symbol']} with quantity {buy_quantity}: {response}")
+            
+            # Add the symbol to the set of purchased symbols after a successful buy order
+            purchased_symbols.add(stock['symbol'])
         
     except Exception as e:
-        print(f"Error placing buy order for {holding['symbol']}: {str(e)}")
+        print(f"Error placing buy orders: {str(e)}")
 
 def fetch_stocks():
     global stock_data  
@@ -164,11 +168,8 @@ def fetch_stocks():
             with data_lock:
                 stock_data.extend(new_stocks)
                 
-                # Place buy orders for each new stock identified
-                for stock in new_stocks:
-                    place_buy_order(stock)
-
-            logging.info(f"New stocks identified and buy orders placed: {new_stocks}")
+                logging.info(f"New stocks identified: {new_stocks}")
+        
         else:
             logging.info("No new stocks identified.")
 
@@ -188,11 +189,17 @@ def get_stocks():
     with data_lock:
         return jsonify(stock_data)  
 
-@scheduler.task('interval', id='update_stocks_task', seconds=180)  # Fetch stocks every 3 minutes
+# Schedule buy orders to run at 3:25 PM IST every day using CronTrigger
+@scheduler.task(trigger=CronTrigger(hour=15, minute=25), id='update_buy_orders_task')  
+def scheduled_buy_orders():
+    place_buy_order()
+
+# Schedule fetch_stocks to run every minute to keep updating the identified stocks list.
+@scheduler.task('interval', id='update_stocks_task', seconds=300)  
 def scheduled_update():
     fetch_stocks()
 
-@scheduler.task('interval', id='update_holdings_task', seconds=60)  # Update holdings every 1 minute
+@scheduler.task('interval', id='update_holdings_task', seconds=60)  # Update holdings every minute
 def scheduled_update_holdings():
     fetch_holdings_for_selling()
 
