@@ -173,3 +173,5 @@ cython_debug/
 ._.DS_Store
 ._app.py
 Credentails.py
+._FetchCurrentHoldings.py
+._utils.py
