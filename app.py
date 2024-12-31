@@ -52,7 +52,7 @@ def fetch_holdings_for_selling():
 
         # Sell stocks using the new sell function
         for holding in filtered_holdings:
-            if holding['percentChange'] > -15 and holding['symbol'] not in processed_symbols:
+            if holding['percentChange'] > 2 and holding['symbol'] not in processed_symbols:
                 place_sell_order(holding)
 
         holdings_data = filtered_holdings
@@ -95,7 +95,7 @@ def place_buy_order(holding):
         
         # Calculate dynamic buy quantity based on current price
         current_price = holding['current_price']
-        buy_quantity = math.floor(10000 / current_price)  # Calculate quantity without decimals
+        buy_quantity = math.floor(5000 / current_price)  # Calculate quantity without decimals
         
         order_data = {
             "symbol": f"NSE:{holding['symbol']}-EQ",
@@ -188,11 +188,11 @@ def get_stocks():
     with data_lock:
         return jsonify(stock_data)  
 
-@scheduler.task('interval', id='update_stocks_task', seconds=180)  # Fetch stocks every 5 minutes
+@scheduler.task('interval', id='update_stocks_task', seconds=180)  # Fetch stocks every 3 minutes
 def scheduled_update():
     fetch_stocks()
 
-@scheduler.task('interval', id='update_holdings_task', seconds=60)  # Update holdings every 15 seconds
+@scheduler.task('interval', id='update_holdings_task', seconds=60)  # Update holdings every 1 minute
 def scheduled_update_holdings():
     fetch_holdings_for_selling()
 
