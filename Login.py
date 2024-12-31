@@ -29,7 +29,6 @@ def getEncodedString(string):
     base64_bytes = base64.b64encode(string.encode("ascii"))
     return base64_bytes.decode("ascii")
 
-
 URL_SEND_LOGIN_OTP = "https://api-t2.fyers.in/vagator/v2/send_login_otp_v2"
 res = requests.post(url=URL_SEND_LOGIN_OTP, json={"fy_id": getEncodedString(cr.FY_ID), "app_id": "2"}).json()
 #print(res)
