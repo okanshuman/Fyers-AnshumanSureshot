@@ -100,7 +100,8 @@ function fetchStocks() {
              } else {
                  data.forEach(stock => {
                      const stockSymbol = stock.symbol.replace('.NS', '');
-                     tableBody.append(`<tr><td>${stock.name}</td><td>${stockSymbol}</td><td>${stock.date}</td></tr>`);
+                     const stockLink = `https://www.tradingview.com/chart/OGJ1XBYF/?symbol=NSE%3A${stockSymbol}`;
+                     tableBody.append(`<tr><td>${stock.name}</td><td><a href="${stockLink}" target="_blank">${stockSymbol}</a></td><td>${stock.date}</td></tr>`);
                  });
              }
              $('#stockTable').DataTable({ // Initialize DataTable after adding rows
