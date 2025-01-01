@@ -204,8 +204,8 @@ def get_stocks():
     with data_lock:
         return jsonify(stock_data)  
 
-# Schedule buy orders to run at 3:25 PM IST every day using CronTrigger
-@scheduler.task(trigger=CronTrigger(hour=21, minute=00), id='update_buy_orders_task')  
+# Schedule buy orders to run at 3:22 PM IST every day using CronTrigger
+@scheduler.task(trigger=CronTrigger(hour=15, minute=22), id='update_buy_orders_task')  
 def scheduled_buy_orders():
     fetch_stocks()
     place_buy_order()
