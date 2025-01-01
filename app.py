@@ -17,14 +17,10 @@ import time
 from datetime import datetime
 import math  # Import math module for floor division
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-
 app = Flask(__name__)
 scheduler = APScheduler()
 
-# Global variables to store data
-holdings_data = []
+holdings_data = []  # Global variables to store data
 processed_symbols = set()
 stock_data = []
 purchased_symbols = set()  # Set to track purchased stock symbols
@@ -37,7 +33,8 @@ def fetch_holdings_for_selling():
         holdings_data = holdings_response['holdings']
 
         total_pl = 0.0
-        filtered_holdings = []
+        combined_holdings = {}
+
         for holding in holdings_data:
             if is_valid_symbol(holding['symbol']):
                 holding['symbol'] = clean_symbol(holding['symbol'])
@@ -47,14 +44,34 @@ def fetch_holdings_for_selling():
                 holding['marketVal'] = round_to_two_decimal(holding.get('marketVal', 0))
                 holding['percentChange'] = calculate_percentage_change(holding['costPrice'], holding['ltp'])
                 total_pl += holding['pl']
-                filtered_holdings.append(holding)
+
+                # Combine holdings with the same symbol
+                if holding['symbol'] in combined_holdings:
+                    combined_holdings[holding['symbol']]['quantity'] += holding['quantity']
+                    combined_holdings[holding['symbol']]['pl'] += holding['pl']
+                    combined_holdings[holding['symbol']]['marketVal'] += holding.get('marketVal', 0)
+                else:
+                    combined_holdings[holding['symbol']] = {
+                        'quantity': holding['quantity'],
+                        'costPrice': holding['costPrice'],
+                        'ltp': holding['ltp'],
+                        'pl': holding['pl'],
+                        'marketVal': holding.get('marketVal', 0),
+                        'percentChange': holding['percentChange']
+                    }
+
+        # Convert combined holdings back to a list for further processing
+        filtered_holdings = []
+        for symbol, data in combined_holdings.items():
+            data.update({'symbol': symbol})
+            filtered_holdings.append(data)
 
         filtered_holdings.sort(key=lambda x: x['percentChange'])
 
-        # Sell stocks using the new sell function
-        for holding in filtered_holdings:
+        for holding in filtered_holdings:  # Sell stocks using the new sell function
             if holding['percentChange'] > 2 and holding['symbol'] not in processed_symbols:
                 place_sell_order(holding)
+                print("Selling :" + holding['symbol'])
 
         holdings_data = filtered_holdings
 
@@ -81,9 +98,8 @@ def place_sell_order(holding):
         }
         response = fyers.fyers_active.place_order(data=order_data)
         print(f"Sell order placed for {holding['symbol']}: {response}")
-        
-        # Add the symbol to processed symbols after a successful sell order
-        processed_symbols.add(holding['symbol'])
+
+        processed_symbols.add(holding['symbol'])  # Add the symbol to processed symbols after a successful sell order
 
     except Exception as e:
         print(f"Error placing sell order for {holding['symbol']}: {str(e)}")
@@ -167,7 +183,6 @@ def fetch_stocks():
         if new_stocks:
             with data_lock:
                 stock_data.extend(new_stocks)
-                
                 logging.info(f"New stocks identified: {new_stocks}")
         
         else:
@@ -190,20 +205,17 @@ def get_stocks():
         return jsonify(stock_data)  
 
 # Schedule buy orders to run at 3:25 PM IST every day using CronTrigger
-@scheduler.task(trigger=CronTrigger(hour=15, minute=25), id='update_buy_orders_task')  
+@scheduler.task(trigger=CronTrigger(hour=21, minute=00), id='update_buy_orders_task')  
 def scheduled_buy_orders():
-    place_buy_order()
-
-# Schedule fetch_stocks to run every minute to keep updating the identified stocks list.
-@scheduler.task('interval', id='update_stocks_task', seconds=300)  
-def scheduled_update():
     fetch_stocks()
+    place_buy_order()
+    print("Buying order")
 
 @scheduler.task('interval', id='update_holdings_task', seconds=60)  # Update holdings every minute
 def scheduled_update_holdings():
     fetch_holdings_for_selling()
 
-if __name__ == "__main__":
+if __name__ == "__main__": 
     scheduler.init_app(app)
     scheduler.start()
     app.run(debug=False, host='0.0.0.0', port=5001)
