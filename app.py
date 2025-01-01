@@ -1,5 +1,4 @@
 # app.py
-
 from flask import Flask, render_template, jsonify
 from flask_apscheduler import APScheduler
 from apscheduler.triggers.cron import CronTrigger  # Import CronTrigger
@@ -45,8 +44,7 @@ def fetch_holdings_for_selling():
                 holding['percentChange'] = calculate_percentage_change(holding['costPrice'], holding['ltp'])
                 total_pl += holding['pl']
 
-                # Combine holdings with the same symbol
-                if holding['symbol'] in combined_holdings:
+                if holding['symbol'] in combined_holdings: # Combine holdings with the same symbol
                     combined_holdings[holding['symbol']]['quantity'] += holding['quantity']
                     combined_holdings[holding['symbol']]['pl'] += holding['pl']
                     combined_holdings[holding['symbol']]['marketVal'] += holding.get('marketVal', 0)
@@ -60,8 +58,7 @@ def fetch_holdings_for_selling():
                         'percentChange': holding['percentChange']
                     }
 
-        # Convert combined holdings back to a list for further processing
-        filtered_holdings = []
+        filtered_holdings = []  # Convert combined holdings back to a list for further processing
         for symbol, data in combined_holdings.items():
             data.update({'symbol': symbol})
             filtered_holdings.append(data)
@@ -98,7 +95,6 @@ def place_sell_order(holding):
         }
         response = fyers.fyers_active.place_order(data=order_data)
         print(f"Sell order placed for {holding['symbol']}: {response}")
-
         processed_symbols.add(holding['symbol'])  # Add the symbol to processed symbols after a successful sell order
 
     except Exception as e:
@@ -113,8 +109,7 @@ def place_buy_order():
                 print(f"Stock {stock['symbol']} has already been purchased. Skipping buy order.")
                 continue
             
-            # Calculate dynamic buy quantity based on current price
-            current_price = stock['current_price']
+            current_price = stock['current_price']  # Calculate dynamic buy quantity based on current price
             buy_quantity = math.floor(5000 / current_price)  # Calculate quantity without decimals
             
             order_data = {
@@ -132,9 +127,8 @@ def place_buy_order():
             }
             response = fyers.fyers_active.place_order(data=order_data)
             print(f"Buy order placed for {stock['symbol']} with quantity {buy_quantity}: {response}")
-            
-            # Add the symbol to the set of purchased symbols after a successful buy order
-            purchased_symbols.add(stock['symbol'])
+
+            purchased_symbols.add(stock['symbol']) # Add the symbol to the set of purchased symbols after a successful buy order
         
     except Exception as e:
         print(f"Error placing buy orders: {str(e)}")
@@ -153,7 +147,6 @@ def fetch_stocks():
     chrome_options.add_argument("--disable-dev-shm-usage")
 
     driver = webdriver.Chrome(service=ChromeService(executable_path='/usr/bin/chromedriver'), options=chrome_options)
-
     new_stocks = []
 
     try:
@@ -204,12 +197,10 @@ def get_stocks():
     with data_lock:
         return jsonify(stock_data)  
 
-# Schedule buy orders to run at 3:22 PM IST every day using CronTrigger
 @scheduler.task(trigger=CronTrigger(hour=15, minute=22), id='update_buy_orders_task')  
 def scheduled_buy_orders():
     fetch_stocks()
     place_buy_order()
-    print("Buying order")
 
 @scheduler.task('interval', id='update_holdings_task', seconds=60)  # Update holdings every minute
 def scheduled_update_holdings():
